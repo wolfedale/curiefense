@@ -5,12 +5,32 @@ services:
     image: "curiefense/curieproxy-envoy:${DOCKER_TAG}"
     restart: always
     volumes:
-      - curieproxy_config:/config
+      # - curieproxy_config:/config
+      - type: bind
+        target: /config
+        # source: /home/bartavelle/gits/work/curiefense/conf/config # /bootstrap/config
+        source: /home/bartavelle/gits/work/curiefense/curiefense/curieproxy2/mounts/config
+      - type: bind
+        target: /lua
+        source: /home/bartavelle/gits/work/curiefense/curiefense/curiefense/curieproxy/lua
+      - type: bind
+        target: /usr/local/lib/lua/5.1/curiefense.so
+        source: /home/bartavelle/gits/work/curiefense/curiefense/curiefense/curieproxy/rust/ctarget/target/release/libcuriefense.so
+      # - type: bind
+      #   target: /lua
+      #   source: /home/bartavelle/gits/work/curiefense/curiefense/curieproxy2/mounts/lua
+      # - type: bind
+      #   target: /usr/local/lib/lua/5.1
+      #   source: /home/bartavelle/gits/work/curiefense/curiefense/curieproxy2/mounts/5.1
+      - type: bind
+        target: /start_curiefense.sh
+        source: /home/bartavelle/gits/work/curiefense/curiefense/curieproxy2/mounts/start_curiefense.sh
     environment:
       - ENVOY_UID
       - TARGET_ADDRESS=echo
       - TARGET_PORT=8080
-      - XFF_TRUSTED_HOPS
+      - XFF_TRUSTED_HOPS=1
+      - REDIS_HOST=redis
     networks:
       curiemesh:
         aliases:
@@ -23,65 +43,65 @@ services:
       - curieproxysslcrt
       - curieproxysslkey
 
-  curieproxyngx:
-    container_name: curieproxyngx
-    image: "curiefense/curieproxy-nginx:${DOCKER_TAG}"
-    restart: always
-    volumes:
-      - curieproxy_config:/config
-    networks:
-      curiemesh:
-        aliases:
-          - curieproxyngx
-    ports:
-      - "30082:30082"
+  # curieproxyngx:
+  #   container_name: curieproxyngx
+  #   image: "curiefense/curieproxy-nginx:${DOCKER_TAG}"
+  #   restart: always
+  #   volumes:
+  #     - curieproxy_config:/config
+  #   networks:
+  #     curiemesh:
+  #       aliases:
+  #         - curieproxyngx
+  #   ports:
+  #     - "30082:30082"
 
-  confserver:
-    container_name: confserver
-    image: "curiefense/confserver:${DOCKER_TAG}"
-    restart: always
-    volumes:
-      - persistent_confdb:/config
-      - local_bucket:/bucket
-    tty: true
-    environment:
-      - CURIE_BUCKET_LINK
-      - INIT_GIT_ON_STARTUP=yes
-      - BOOTSTRAP_BUCKET_ON_STARTUP=yes
-      - IF_NO_CONFIG_INIT_FROM=/bootstrap/confdb-initial-data/
-    networks:
-      - confnet
-    ports:
-      - "30000:80"
-    secrets:
-      - s3cfg
+  # confserver:
+  #   container_name: confserver
+  #   image: "curiefense/confserver:${DOCKER_TAG}"
+  #   restart: always
+  #   volumes:
+  #     - persistent_confdb:/config
+  #     - local_bucket:/bucket
+  #   tty: true
+  #   environment:
+  #     - CURIE_BUCKET_LINK
+  #     - INIT_GIT_ON_STARTUP=yes
+  #     - BOOTSTRAP_BUCKET_ON_STARTUP=yes
+  #     - IF_NO_CONFIG_INIT_FROM=/bootstrap/confdb-initial-data/
+  #   networks:
+  #     - confnet
+  #   ports:
+  #     - "30000:80"
+  #   secrets:
+  #     - s3cfg
   #      - gc
   #      - azr
 
-  curiesync:
-    container_name: curiesync
-    image: "curiefense/curiesync:${DOCKER_TAG}"
-    restart: always
-    volumes:
-      - local_bucket:/bucket
-      - curieproxy_config:/config
-    tty: true
-    environment:
-      - CURIE_BUCKET_LINK
-      - RUN_MODE=PERIODIC_SYNC
-    networks:
-      - curiemesh
-    secrets:
-      - s3cfg
-#      - gc
-#      - azr
+#   curiesync:
+#     container_name: curiesync
+#     image: "curiefense/curiesync:${DOCKER_TAG}"
+#     restart: always
+#     volumes:
+#       - local_bucket:/bucket
+#       - curieproxy_config:/config
+#     tty: true
+#     environment:
+#       - CURIE_BUCKET_LINK
+#       - RUN_MODE=PERIODIC_SYNC
+#     networks:
+#       - curiemesh
+#     secrets:
+#       - s3cfg
+# #      - gc
+# #      - azr
 
-  curietasker:
-    container_name: curietasker
-    image: "curiefense/curietasker:${DOCKER_TAG}"
-    restart: always
-    networks:
-      - confnet
+#   curietasker:
+#     container_name: curietasker
+#     image: "curiefense/curietasker:${DOCKER_TAG}"
+#     restart: always
+#     networks:
+#       - confnet
 
   redis:
     container_name: redis
@@ -105,117 +125,117 @@ services:
         aliases:
           - echo
 
-  curielogger:
-    container_name: curielogger
-    image: "curiefense/curielogger:${DOCKER_TAG}"
-    restart: always
-    environment:
-      - CURIELOGGER_OUTPUTS_LOGSTASH_ENABLED=true
-      - CURIELOGGER_OUTPUTS_LOGSTASH_URL=http://logstash:5001/
-      - CURIELOGGER_USES_FLUENTD=0
-      - CURIELOGGER_FLUENTD_URL=http://fluentd:5001/
-      - CURIELOGGER_METRICS_PROMETHEUS_ENABLED=true
-      - ELASTICSEARCH_URL=http://elasticsearch:9200/
+  # curielogger:
+  #   container_name: curielogger
+  #   image: "curiefense/curielogger:${DOCKER_TAG}"
+  #   restart: always
+  #   environment:
+  #     - CURIELOGGER_OUTPUTS_LOGSTASH_ENABLED=true
+  #     - CURIELOGGER_OUTPUTS_LOGSTASH_URL=http://logstash:5001/
+  #     - CURIELOGGER_USES_FLUENTD=0
+  #     - CURIELOGGER_FLUENTD_URL=http://fluentd:5001/
+  #     - CURIELOGGER_METRICS_PROMETHEUS_ENABLED=true
+  #     - ELASTICSEARCH_URL=http://elasticsearch:9200/
 
-    networks:
-      - curiemesh
-    ports:
-      - "9001:9001"
-      - "2112:2112"
+  #   networks:
+  #     - curiemesh
+  #   ports:
+  #     - "9001:9001"
+  #     - "2112:2112"
 
-  uiserver:
-    container_name: uiserver
-    image: "curiefense/uiserver:${DOCKER_TAG}"
-    restart: always
-    networks:
-      - confnet
-    ports:
-      - "30080:80"
-      - "30443:443"
-    secrets:
-      - uisslcrt
-      - uisslkey
+  # uiserver:
+  #   container_name: uiserver
+  #   image: "curiefense/uiserver:${DOCKER_TAG}"
+  #   restart: always
+  #   networks:
+  #     - confnet
+  #   ports:
+  #     - "30080:80"
+  #     - "30443:443"
+  #   secrets:
+  #     - uisslcrt
+  #     - uisslkey
 
-  prometheus:
-    container_name: prometheus
-    image: "curiefense/prometheus:${DOCKER_TAG}"
-    restart: always
-    volumes:
-      - persistent_prometheus:/var/run/prometheus
-    ports:
-      - 9090:9090
-    networks:
-      - curiemesh
+  # prometheus:
+  #   container_name: prometheus
+  #   image: "curiefense/prometheus:${DOCKER_TAG}"
+  #   restart: always
+  #   volumes:
+  #     - persistent_prometheus:/var/run/prometheus
+  #   ports:
+  #     - 9090:9090
+  #   networks:
+  #     - curiemesh
 
-  grafana:
-    container_name: grafana
-    image: "curiefense/grafana:${DOCKER_TAG}"
-    restart: always
-    volumes:
-      - persistent_grafana:/var/lib/grafana
-    networks:
-      - curiemesh
-      - confnet
-    ports:
-      - 30300:3000
+  # grafana:
+  #   container_name: grafana
+  #   image: "curiefense/grafana:${DOCKER_TAG}"
+  #   restart: always
+  #   volumes:
+  #     - persistent_grafana:/var/lib/grafana
+  #   networks:
+  #     - curiemesh
+  #     - confnet
+  #   ports:
+  #     - 30300:3000
 
-  elasticsearch:
-    container_name: elasticsearch
-    image: docker.elastic.co/elasticsearch/elasticsearch:7.10.1
-    restart: always
-    volumes:
-      - persistent_elasticsearch:/usr/share/elasticsearch/data
-    environment:
-      - node.name=es
-      - cluster.name=curiefense-es-cluster
-      - discovery.type=single-node
-      - bootstrap.memory_lock=true
-      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
-    networks:
-      - curiemesh
-    ports:
-      - 9200:9200
-    ulimits:
-      memlock:
-        soft: -1
-        hard: -1
+  # elasticsearch:
+  #   container_name: elasticsearch
+  #   image: docker.elastic.co/elasticsearch/elasticsearch:7.10.1
+  #   restart: always
+  #   volumes:
+  #     - persistent_elasticsearch:/usr/share/elasticsearch/data
+  #   environment:
+  #     - node.name=es
+  #     - cluster.name=curiefense-es-cluster
+  #     - discovery.type=single-node
+  #     - bootstrap.memory_lock=true
+  #     - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+  #   networks:
+  #     - curiemesh
+  #   ports:
+  #     - 9200:9200
+  #   ulimits:
+  #     memlock:
+  #       soft: -1
+  #       hard: -1
 
-  kibana:
-    container_name: kibana
-    image: docker.elastic.co/kibana/kibana:7.10.1
-    restart: always
-    environment:
-      - ELASTICSEARCH_URL=http://elasticsearch:9200
-      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
-      - TELEMETRY_ENABLED=false
-      - TELEMETRY_OPTIN=false
-    networks:
-      - curiemesh
-    ports:
-      - 5601:5601
+  # kibana:
+  #   container_name: kibana
+  #   image: docker.elastic.co/kibana/kibana:7.10.1
+  #   restart: always
+  #   environment:
+  #     - ELASTICSEARCH_URL=http://elasticsearch:9200
+  #     - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+  #     - TELEMETRY_ENABLED=false
+  #     - TELEMETRY_OPTIN=false
+  #   networks:
+  #     - curiemesh
+  #   ports:
+  #     - 5601:5601
 
-  logstash:
-    container_name: logstash
-    image: docker.elastic.co/logstash/logstash:7.10.1
-    restart: always
-    volumes:
-      - type: bind
-        source: ./logstash
-        target: /usr/share/logstash/pipeline/
-        read_only: true
-      - type: bind
-        source: ./logstash/pipelines.yml
-        target: /usr/share/logstash/config/pipelines.yml
-        read_only: true
-    environment:
-      - ELASTICSEARCH_URL=http://elasticsearch:9200
-      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
-      - CURIEFENSE_INDEX_NAME=curieaccesslog
-    networks:
-      - curiemesh
-    ports:
-      # http input
-      - 5001:5001
+  # logstash:
+  #   container_name: logstash
+  #   image: docker.elastic.co/logstash/logstash:7.10.1
+  #   restart: always
+  #   volumes:
+  #     - type: bind
+  #       source: ./logstash
+  #       target: /usr/share/logstash/pipeline/
+  #       read_only: true
+  #     - type: bind
+  #       source: ./logstash/pipelines.yml
+  #       target: /usr/share/logstash/config/pipelines.yml
+  #       read_only: true
+  #   environment:
+  #     - ELASTICSEARCH_URL=http://elasticsearch:9200
+  #     - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+  #     - CURIEFENSE_INDEX_NAME=curieaccesslog
+  #   networks:
+  #     - curiemesh
+  #   ports:
+  #     # http input
+  #     - 5001:5001
 
   # uncomment this to replace logstash with fluentd
   # fluentd:
